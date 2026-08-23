@@ -1,6 +1,7 @@
 param(
     [string]$QtPrefix = $env:QT_ROOT_DIR,
     [string]$BuildDir = "build",
+    [string]$Generator = "Visual Studio 18 2026",
     [switch]$SkipEverythingSdk,
     [switch]$SkipDeploy
 )
@@ -9,15 +10,23 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 $Build = Join-Path $Root $BuildDir
 
-$cmakeArgs = @("-S", $Root, "-B", $Build, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release")
+$cmakeArgs = @("-S", $Root, "-B", $Build, "-G", $Generator)
+if ($Generator -like "Visual Studio*") {
+    $cmakeArgs += @("-A", "x64")
+} else {
+    $cmakeArgs += "-DCMAKE_BUILD_TYPE=Release"
+}
 if ($QtPrefix) {
     $cmakeArgs += "-DCMAKE_PREFIX_PATH=$QtPrefix"
 }
 
-Write-Host "[Quickary] Configuring..."
+Write-Host "[Quickary] Configuring with $Generator..."
 & cmake @cmakeArgs
+if ($LASTEXITCODE -ne 0) { throw "CMake configure failed." }
+
 Write-Host "[Quickary] Building Release..."
-& cmake --build $Build --config Release
+& cmake --build $Build --config Release --parallel
+if ($LASTEXITCODE -ne 0) { throw "Quickary build failed." }
 
 $Exe = Get-ChildItem -Path $Build -Filter Quickary.exe -Recurse | Select-Object -First 1
 if (-not $Exe) { throw "Quickary.exe was not produced." }
@@ -35,6 +44,7 @@ if (-not $SkipDeploy) {
     if ($windeploy) {
         Write-Host "[Quickary] Deploying Qt runtime..."
         & $windeploy --release --no-translations $Exe.FullName
+        if ($LASTEXITCODE -ne 0) { throw "windeployqt failed." }
     } else {
         Write-Warning "windeployqt.exe was not found. The executable was built but Qt runtime DLLs were not deployed."
     }
