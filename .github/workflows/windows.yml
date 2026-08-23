@@ -34,18 +34,27 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Failed to extract $archive" }
           }
 
-          $qtRoot = Join-Path $qtOut '6.11.2\msvc2022_64'
-          if (-not (Test-Path (Join-Path $qtRoot 'lib\cmake\Qt6\Qt6Config.cmake'))) {
-            throw "Qt installation is incomplete: $qtRoot"
+          # Do not assume the archive's internal prefix. Qt 6.11 changed the
+          # repository/package layout, so resolve the root from Qt6Config.cmake.
+          $qtConfig = Get-ChildItem -Path $qtOut -Recurse -File -Filter 'Qt6Config.cmake' |
+            Select-Object -First 1
+          if (-not $qtConfig) {
+            Get-ChildItem -Path $qtOut -Recurse -Depth 4 | Select-Object -ExpandProperty FullName | Out-Host
+            throw 'Qt6Config.cmake was not found after extracting the official Qt archives'
           }
+
+          $qtRoot = $qtConfig.Directory.Parent.Parent.Parent.FullName
+          $qtBin = Join-Path $qtRoot 'bin'
+          if (-not (Test-Path $qtBin)) { throw "Qt bin directory is missing: $qtBin" }
 
           @"
           [Paths]
           Prefix=..
-          "@ | Set-Content -Encoding ASCII (Join-Path $qtRoot 'bin\qt.conf')
+          "@ | Set-Content -Encoding ASCII (Join-Path $qtBin 'qt.conf')
 
+          Write-Host "Resolved Qt root: $qtRoot"
           "QT_ROOT_DIR=$qtRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          (Join-Path $qtRoot 'bin') | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          $qtBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Configure
         shell: pwsh
