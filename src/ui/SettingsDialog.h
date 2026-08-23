@@ -6,6 +6,7 @@ class QCheckBox;
 class QComboBox;
 class QLineEdit;
 class QPushButton;
+class QShowEvent;
 class QSpinBox;
 
 namespace quickary {
@@ -17,6 +18,9 @@ public:
 
 signals:
     void settingsApplied();
+
+protected:
+    void showEvent(QShowEvent* event) override;
 
 private slots:
     void apply();
