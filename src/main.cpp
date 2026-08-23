@@ -9,6 +9,7 @@
 #include "core/ConfigStore.h"
 #include "core/HttpApiServer.h"
 #include "core/SearchCoordinator.h"
+#include "platform/DialogNavigator.h"
 #include "platform/HotkeyManager.h"
 #include "providers/AppProvider.h"
 #include "providers/CommandProvider.h"
@@ -26,7 +27,7 @@ int main(int argc, char** argv)
     QApplication app(argc, argv);
     QCoreApplication::setOrganizationName(QStringLiteral("QuickaryProject"));
     QCoreApplication::setApplicationName(QStringLiteral("Quickary"));
-    QCoreApplication::setApplicationVersion(QStringLiteral("1.1.0"));
+    QCoreApplication::setApplicationVersion(QStringLiteral("1.2.0"));
     QApplication::setQuitOnLastWindowClosed(false);
 
     auto& appSettings = AppSettings::instance();
@@ -47,9 +48,13 @@ int main(int argc, char** argv)
     HotkeyManager hotkeys;
     hotkeys.setExplorerTypeToSearch(appSettings.explorerTypeToSearch());
     QObject::connect(&hotkeys, &HotkeyManager::activated, &window, [&window] {
+        DialogNavigator::captureForegroundTarget();
         window.summon(window.isVisible());
     });
-    QObject::connect(&hotkeys, &HotkeyManager::deepSearchRequested, &window, [&window] { window.summon(true); });
+    QObject::connect(&hotkeys, &HotkeyManager::deepSearchRequested, &window, [&window] {
+        DialogNavigator::captureForegroundTarget();
+        window.summon(true);
+    });
     QObject::connect(&hotkeys, &HotkeyManager::explorerTextTyped, &window, [&window](const QString& text) { window.typeFromExplorer(text); });
 
     const auto showSettings = [&settingsDialog] {
