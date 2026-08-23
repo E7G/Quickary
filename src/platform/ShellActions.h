@@ -16,6 +16,7 @@ public:
     static void copyPaths(const QStringList& paths);
     static void copyFiles(const QStringList& paths, bool cut);
     static bool recycle(const QString& path);
+    static bool showNativeContextMenu(const QString& path, QWidget* parent = nullptr);
     static bool executeCommand(const SearchItem& item, QWidget* parent = nullptr);
     static bool executeTemplate(const QString& program, const QStringList& argumentTemplates,
                                 const QString& path, const QString& currentFolder, const QString& query,

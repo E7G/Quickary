@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QClipboard>
+#include <QCursor>
 #include <QDesktopServices>
 #include <QDir>
 #include <QFile>
@@ -10,10 +11,13 @@
 #include <QMimeData>
 #include <QProcess>
 #include <QUrl>
+#include <QWidget>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
+#include <objbase.h>
 #include <shellapi.h>
+#include <shlobj.h>
 #endif
 
 namespace quickary {
@@ -39,7 +43,6 @@ QString quoteWindowsArgument(QString arg)
 #endif
 
 } // namespace
-
 
 bool ShellActions::openPath(const QString& path)
 {
@@ -102,6 +105,69 @@ bool ShellActions::recycle(const QString& path)
     return SHFileOperationW(&op) == 0 && !op.fAnyOperationsAborted;
 #else
     return QFile::moveToTrash(path);
+#endif
+}
+
+bool ShellActions::showNativeContextMenu(const QString& path, QWidget* parent)
+{
+#ifndef Q_OS_WIN
+    Q_UNUSED(path);
+    Q_UNUSED(parent);
+    return false;
+#else
+    if (path.isEmpty()) return false;
+
+    const HRESULT init = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    const bool shouldUninitialize = SUCCEEDED(init);
+    if (FAILED(init) && init != RPC_E_CHANGED_MODE) return false;
+
+    PIDLIST_ABSOLUTE pidl = nullptr;
+    const std::wstring native = QDir::toNativeSeparators(path).toStdWString();
+    HRESULT hr = SHParseDisplayName(native.c_str(), nullptr, &pidl, 0, nullptr);
+    if (FAILED(hr) || !pidl) {
+        if (shouldUninitialize) CoUninitialize();
+        return false;
+    }
+
+    IShellFolder* folder = nullptr;
+    PCUITEMID_CHILD child = nullptr;
+    hr = SHBindToParent(pidl, IID_PPV_ARGS(&folder), &child);
+    IContextMenu* contextMenu = nullptr;
+    const HWND owner = parent ? reinterpret_cast<HWND>(parent->winId()) : GetForegroundWindow();
+    if (SUCCEEDED(hr) && folder && child) {
+        hr = folder->GetUIObjectOf(owner, 1, &child, IID_IContextMenu, nullptr,
+                                   reinterpret_cast<void**>(&contextMenu));
+    }
+
+    bool invoked = false;
+    HMENU menu = nullptr;
+    if (SUCCEEDED(hr) && contextMenu) {
+        menu = CreatePopupMenu();
+        if (menu && SUCCEEDED(contextMenu->QueryContextMenu(menu, 0, 1, 0x7FFF, CMF_NORMAL))) {
+            const QPoint cursor = QCursor::pos();
+            const UINT command = TrackPopupMenuEx(menu,
+                                                   TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_LEFTALIGN,
+                                                   cursor.x(), cursor.y(), owner, nullptr);
+            if (command > 0) {
+                CMINVOKECOMMANDINFOEX info{};
+                info.cbSize = sizeof(info);
+                info.fMask = CMIC_MASK_UNICODE | CMIC_MASK_PTINVOKE;
+                info.hwnd = owner;
+                info.lpVerb = MAKEINTRESOURCEA(command - 1);
+                info.lpVerbW = MAKEINTRESOURCEW(command - 1);
+                info.nShow = SW_SHOWNORMAL;
+                info.ptInvoke = POINT{cursor.x(), cursor.y()};
+                invoked = SUCCEEDED(contextMenu->InvokeCommand(reinterpret_cast<LPCMINVOKECOMMANDINFO>(&info)));
+            }
+        }
+    }
+
+    if (menu) DestroyMenu(menu);
+    if (contextMenu) contextMenu->Release();
+    if (folder) folder->Release();
+    CoTaskMemFree(pidl);
+    if (shouldUninitialize) CoUninitialize();
+    return invoked;
 #endif
 }
 

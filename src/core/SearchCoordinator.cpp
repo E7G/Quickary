@@ -1,4 +1,5 @@
 #include "SearchCoordinator.h"
+#include "AppSettings.h"
 #include "Ranker.h"
 #include "QueryParser.h"
 #include "../providers/ISearchProvider.h"
@@ -24,7 +25,8 @@ void SearchCoordinator::search(QString query, QString currentFolder, bool deepSe
     query_ = std::move(query);
     rankQuery_ = QueryParser::parse(query_).plainText;
     ++serial_;
-    limit_ = deepSearch ? 300 : 64;
+    const auto& settings = AppSettings::instance();
+    limit_ = deepSearch ? settings.deepSearchResultLimit() : settings.launcherResultLimit();
     batches_.clear();
 
     SearchRequest request;
