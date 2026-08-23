@@ -72,14 +72,47 @@ jobs:
       - name: Stage portable artifact
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           cmake --install build --prefix dist --config Release
           windeployqt --release --no-translations dist/Quickary.exe
+
+          # The Everything SDK documentation expects Everything64.dll beside
+          # the application. Fetch the official SDK so the artifact is ready to
+          # run once the standard Everything desktop/service is installed.
+          $sdkZip = Join-Path $env:RUNNER_TEMP 'Everything-SDK.zip'
+          $sdkDir = Join-Path $env:RUNNER_TEMP 'everything-sdk'
+          curl.exe -fL --retry 5 --retry-delay 2 'https://www.voidtools.com/Everything-SDK.zip' -o $sdkZip
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to download the official Everything SDK' }
+          Expand-Archive -Path $sdkZip -DestinationPath $sdkDir -Force
+          $everythingDll = Get-ChildItem -Path $sdkDir -Recurse -File -Filter 'Everything64.dll' | Select-Object -First 1
+          if (-not $everythingDll) { throw 'Everything64.dll was not found in the official SDK archive' }
+          Copy-Item $everythingDll.FullName 'dist/Everything64.dll' -Force
+
           Copy-Item README.md,FEATURES.md,DESIGN.md,CUSTOMIZATION.md,config.example.json dist/
           Copy-Item scripts/build-windows.ps1 dist/
+
+          $license = Get-ChildItem -Path $sdkDir -Recurse -File -Filter 'License.txt' | Select-Object -First 1
+          if ($license) {
+            Copy-Item $license.FullName 'dist/Everything-LICENSE.txt' -Force
+          } else {
+            @"
+          Everything SDK / Everything64.dll is provided by voidtools.
+          Redistribution information and license: https://www.voidtools.com/License.txt
+          "@ | Set-Content -Encoding UTF8 'dist/Everything-LICENSE.txt'
+          }
+
           @"
-          Quickary requires the standard Everything client (not Everything Lite) and Everything64.dll from the official Everything SDK.
-          Run scripts/build-windows.ps1 locally for automatic SDK download/copy, or download the SDK from https://www.voidtools.com/support/everything/sdk/.
-          "@ | Set-Content -Encoding UTF8 dist/README-RUNTIME.txt
+          Quickary portable package
+          =========================
+          Quickary.exe and its Qt runtime dependencies are included.
+          Everything64.dll from the official Everything SDK is included beside Quickary.exe.
+
+          Quickary still requires the standard Everything application/service (not Everything Lite)
+          to be installed or running because the SDK DLL communicates with Everything over IPC.
+          "@ | Set-Content -Encoding UTF8 'dist/README-RUNTIME.txt'
+
+          if (-not (Test-Path 'dist/Quickary.exe')) { throw 'Quickary.exe is missing from staged artifact' }
+          if (-not (Test-Path 'dist/Everything64.dll')) { throw 'Everything64.dll is missing from staged artifact' }
 
       - uses: actions/upload-artifact@v4
         with:
