@@ -7,6 +7,7 @@
 
 #include "core/AppSettings.h"
 #include "core/ConfigStore.h"
+#include "core/HttpApiServer.h"
 #include "core/SearchCoordinator.h"
 #include "platform/HotkeyManager.h"
 #include "providers/AppProvider.h"
@@ -25,7 +26,7 @@ int main(int argc, char** argv)
     QApplication app(argc, argv);
     QCoreApplication::setOrganizationName(QStringLiteral("QuickaryProject"));
     QCoreApplication::setApplicationName(QStringLiteral("Quickary"));
-    QCoreApplication::setApplicationVersion(QStringLiteral("1.0.0"));
+    QCoreApplication::setApplicationVersion(QStringLiteral("1.1.0"));
     QApplication::setQuitOnLastWindowClosed(false);
 
     auto& appSettings = AppSettings::instance();
@@ -41,11 +42,11 @@ int main(int argc, char** argv)
 
     LauncherWindow window(&coordinator);
     SettingsDialog settingsDialog;
+    HttpApiServer apiServer;
 
     HotkeyManager hotkeys;
     hotkeys.setExplorerTypeToSearch(appSettings.explorerTypeToSearch());
     QObject::connect(&hotkeys, &HotkeyManager::activated, &window, [&window] {
-        // A second invocation while the launcher is open expands into Deep Search and preserves the query.
         window.summon(window.isVisible());
     });
     QObject::connect(&hotkeys, &HotkeyManager::deepSearchRequested, &window, [&window] { window.summon(true); });
@@ -72,11 +73,26 @@ int main(int argc, char** argv)
         appSettings.sync();
         hotkeys.setExplorerTypeToSearch(enabled);
     });
+
+    const auto applyApiSettings = [&apiServer, &appSettings] {
+        if (!appSettings.httpApiEnabled()) {
+            apiServer.stop();
+            return;
+        }
+        apiServer.start(appSettings.httpApiPort(), appSettings.httpApiToken());
+    };
+
     QObject::connect(&settingsDialog, &SettingsDialog::settingsApplied, &app, [&] {
         const bool enabled = appSettings.explorerTypeToSearch();
         explorerTyping->setChecked(enabled);
         hotkeys.setExplorerTypeToSearch(enabled);
         window.applySettings();
+        applyApiSettings();
+    });
+    QObject::connect(&apiServer, &HttpApiServer::statusChanged, &app,
+                     [&tray, &appSettings](bool listening, const QString& detail) {
+        if (!listening && appSettings.httpApiEnabled())
+            tray.showMessage(QStringLiteral("Quickary HTTP API"), detail, QSystemTrayIcon::Warning, 3500);
     });
 
     trayMenu.addSeparator();
@@ -100,5 +116,6 @@ int main(int argc, char** argv)
     });
     tray.show();
 
+    applyApiSettings();
     return app.exec();
 }
