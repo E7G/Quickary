@@ -68,11 +68,11 @@ int main(int argc, char** argv)
     tray.setToolTip(QStringLiteral("Quickary"));
     QMenu trayMenu;
     trayMenu.addAction(QStringLiteral("Launcher"), &window, [&window] {
-        DialogNavigator::captureForegroundTarget();
+        DialogNavigator::discardForegroundTarget();
         window.summon(false);
     });
     trayMenu.addAction(QStringLiteral("Deep Search"), &window, [&window] {
-        DialogNavigator::captureForegroundTarget();
+        DialogNavigator::discardForegroundTarget();
         window.summon(true);
     });
     trayMenu.addAction(QStringLiteral("Settings…"), &app, showSettings);
@@ -124,7 +124,7 @@ int main(int argc, char** argv)
     tray.setContextMenu(&trayMenu);
     QObject::connect(&tray, &QSystemTrayIcon::activated, &window, [&window](QSystemTrayIcon::ActivationReason reason) {
         if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick) {
-            DialogNavigator::captureForegroundTarget();
+            DialogNavigator::discardForegroundTarget();
             window.summon(false);
         }
     });
