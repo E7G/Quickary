@@ -6,27 +6,28 @@ on:
 
 jobs:
   build:
-    runs-on: windows-2022
+    runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: jurplel/install-qt-action@v4
         with:
-          version: '6.8.3'
+          version: '6.11.2'
           arch: 'win64_msvc2022_64'
           cache: true
 
-      - uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
       - name: Configure
         shell: pwsh
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQUICKARY_ENABLE_PINYIN=OFF
+        run: >
+          cmake -S . -B build
+          -G "Visual Studio 18 2026"
+          -A x64
+          -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR"
+          -DQUICKARY_ENABLE_PINYIN=OFF
 
       - name: Build
         shell: pwsh
-        run: cmake --build build --config Release --verbose
+        run: cmake --build build --config Release --parallel --verbose
 
       - name: Stage portable artifact
         shell: pwsh
