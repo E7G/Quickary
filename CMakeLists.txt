@@ -10,7 +10,7 @@ set(CMAKE_AUTOUIC ON)
 option(QUICKARY_ENABLE_WARNINGS "Enable strict compiler warnings" ON)
 option(QUICKARY_ENABLE_PINYIN "Enable optional cpp-pinyin matching when the package is available" ON)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Widgets Concurrent)
+find_package(Qt6 6.11 REQUIRED COMPONENTS Core Gui Widgets Concurrent)
 
 if(QUICKARY_ENABLE_PINYIN)
     find_package(cpp-pinyin CONFIG QUIET)
