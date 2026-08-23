@@ -10,6 +10,7 @@
 #include <QTcpSocket>
 #include <QUrl>
 #include <QUrlQuery>
+#include <limits>
 
 namespace quickary {
 namespace {
@@ -90,7 +91,7 @@ void HttpApiServer::acceptConnections()
 
 void HttpApiServer::consumeRequest(QTcpSocket* socket)
 {
-    if (!socket) return;
+    if (!socket || socket->property("quickaryRequestAccepted").toBool()) return;
     if (socket->bytesAvailable() > 16 * 1024) {
         sendError(socket, 413, "Payload Too Large", QStringLiteral("request headers are too large"));
         return;
@@ -149,6 +150,7 @@ void HttpApiServer::consumeRequest(QTcpSocket* socket)
     int limit = params.queryItemValue(QStringLiteral("limit")).toInt(&ok);
     if (!ok) limit = 50;
     limit = qBound(1, limit, 200);
+    socket->setProperty("quickaryRequestAccepted", true);
     queueSearch(socket, query, limit);
 }
 
@@ -157,11 +159,12 @@ bool HttpApiServer::authorized(const QList<QByteArray>& lines) const
     const QByteArray bearer = QByteArray("Bearer ") + token_;
     for (int i = 1; i < lines.size(); ++i) {
         const QByteArray line = lines.at(i).trimmed();
-        if (line.startsWith("Authorization:", Qt::CaseInsensitive)) {
+        const QByteArray lower = line.toLower();
+        if (lower.startsWith("authorization:")) {
             const QByteArray value = line.mid(sizeof("Authorization:") - 1).trimmed();
             if (value == bearer) return true;
         }
-        if (line.startsWith("X-Quickary-Token:", Qt::CaseInsensitive)) {
+        if (lower.startsWith("x-quickary-token:")) {
             const QByteArray value = line.mid(sizeof("X-Quickary-Token:") - 1).trimmed();
             if (value == token_) return true;
         }
@@ -212,11 +215,12 @@ void HttpApiServer::onSearchResults(const SearchBatch& batch)
         const int count = qMin(active_.limit, batch.items.size());
         for (int i = 0; i < count; ++i) {
             const SearchItem& item = batch.items.at(i);
+            const quint64 maxJsonInteger = static_cast<quint64>(std::numeric_limits<qint64>::max());
             QJsonObject object{
                 {QStringLiteral("type"), kindName(item.kind)},
                 {QStringLiteral("name"), item.title},
                 {QStringLiteral("path"), item.path},
-                {QStringLiteral("size"), static_cast<qint64>(qMin<quint64>(item.size, static_cast<quint64>(std::numeric_limits<qint64>::max())))},
+                {QStringLiteral("size"), static_cast<qint64>(qMin(item.size, maxJsonInteger))},
             };
             if (item.modified.isValid()) object.insert(QStringLiteral("modified"), item.modified.toString(Qt::ISODateWithMs));
             results.append(object);
