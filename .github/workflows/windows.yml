@@ -10,9 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Qt 6.11 changed the online repository layout. aqtinstall 3.3.0 still
-      # assumes the pre-6.11 layout, so install the official Qt archives
-      # directly until upstream aqtinstall ships support for the new layout.
       - name: Install Qt 6.11.2
         shell: pwsh
         run: |
@@ -34,8 +31,6 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Failed to extract $archive" }
           }
 
-          # Do not assume the archive's internal prefix. Qt 6.11 changed the
-          # repository/package layout, so resolve the root from Qt6Config.cmake.
           $qtConfig = Get-ChildItem -Path $qtOut -Recurse -File -Filter 'Qt6Config.cmake' |
             Select-Object -First 1
           if (-not $qtConfig) {
@@ -76,9 +71,6 @@ jobs:
           cmake --install build --prefix dist --config Release
           windeployqt --release --no-translations dist/Quickary.exe
 
-          # The Everything SDK documentation expects Everything64.dll beside
-          # the application. Fetch the official SDK so the artifact is ready to
-          # run once the standard Everything desktop/service is installed.
           $sdkZip = Join-Path $env:RUNNER_TEMP 'Everything-SDK.zip'
           $sdkDir = Join-Path $env:RUNNER_TEMP 'everything-sdk'
           curl.exe -fL --retry 5 --retry-delay 2 'https://www.voidtools.com/Everything-SDK.zip' -o $sdkZip
@@ -88,7 +80,7 @@ jobs:
           if (-not $everythingDll) { throw 'Everything64.dll was not found in the official SDK archive' }
           Copy-Item $everythingDll.FullName 'dist/Everything64.dll' -Force
 
-          Copy-Item README.md,FEATURES.md,DESIGN.md,CUSTOMIZATION.md,config.example.json dist/
+          Copy-Item README.md,FEATURES.md,HTTP_API.md,DESIGN.md,CUSTOMIZATION.md,config.example.json dist/
           Copy-Item scripts/build-windows.ps1 dist/
 
           $license = Get-ChildItem -Path $sdkDir -Recurse -File -Filter 'License.txt' | Select-Object -First 1

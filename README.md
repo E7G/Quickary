@@ -1,10 +1,10 @@
-# Quickary 1.0
+# Quickary 1.1
 
 Quickary is an independent Windows-first launcher and file-search application built with Qt 6 and C++20. It focuses on fast keyboard workflows, low idle resource use, and native Windows integration.
 
-See [`FEATURES.md`](FEATURES.md) for the detailed implementation matrix and [`CUSTOMIZATION.md`](CUSTOMIZATION.md) for custom filters, commands, actions and web engines.
+See [`FEATURES.md`](FEATURES.md) for the detailed implementation matrix, [`CUSTOMIZATION.md`](CUSTOMIZATION.md) for custom filters/commands/actions/web engines, and [`HTTP_API.md`](HTTP_API.md) for the optional localhost API.
 
-## Included in 1.0
+## Included in 1.1
 
 - Instant file/folder search through Everything SDK IPC.
 - Compact Launcher and a full Deep Search workspace.
@@ -21,6 +21,7 @@ See [`FEATURES.md`](FEATURES.md) for the detailed implementation matrix and [`CU
 - Network/NAS locations through Everything Folder Index without a second resident crawler.
 - Graphical Settings for startup, Explorer typing, preview behavior, native preview, result limits, close behavior and System/Dark/Light themes.
 - Per-user Start with Windows support without administrator rights.
+- **Optional localhost HTTP search API**: disabled by default, `127.0.0.1` only, bearer-token authentication, bounded queue, 200-result cap and no command/action execution surface.
 - Tray operation, no telemetry and no timer-based global polling while idle.
 
 ## Requirements
@@ -77,6 +78,19 @@ regex:^IMG_\d{4}\.jpg$
 
 Content search is explicit by design. Ordinary Launcher input remains on the fast indexed filename/path route and does not read file contents.
 
+## Local HTTP API
+
+Enable it under **Settings → API**. The default port is `32142`.
+
+```powershell
+$token = '<token from Quickary Settings>'
+Invoke-RestMethod `
+  -Uri 'http://127.0.0.1:32142/v1/search?q=report%20ext%3Apdf&limit=25' `
+  -Headers @{ Authorization = "Bearer $token" }
+```
+
+`GET /health` is unauthenticated. `GET /v1/search` requires the token. The API exposes only the Everything-backed file/folder search path; it cannot execute Quickary commands, custom actions, shell commands, or web actions. See [`HTTP_API.md`](HTTP_API.md).
+
 ## Performance model
 
-Everything queries run on one background worker and rapid keystrokes are coalesced to the newest request. UI input uses a short debounce, icons/Pinyin are cached, facets and sorting operate locally on returned results, preview is lazy, and Quickary does not run a competing network or filesystem crawler.
+Everything queries run on background workers, UI keystrokes are coalesced, and all Everything provider instances share a process-wide SDK lock so the optional API cannot corrupt UI query state. UI input uses a short debounce, icons/Pinyin are cached, facets and sorting operate locally on returned results, preview is lazy, and Quickary does not run a competing network or filesystem crawler. The HTTP listener and its dedicated provider are not created while the API is disabled.

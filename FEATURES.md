@@ -1,9 +1,9 @@
-# Quickary 1.0 feature matrix
+# Quickary 1.1 feature matrix
 
 This document tracks the **publicly documented Listary-style workflow surface** against Quickary.
 Quickary is an independent implementation: it does not copy Listary code, assets, branding, or proprietary implementation details.
 
-Legend: **Implemented** = usable in this repository; **Implemented (optional)** = available when its external Windows/Everything component is present; **Delegated** = intentionally supplied by the system/indexer instead of duplicated inside Quickary; **Planned** = non-core extension that is not presented as finished.
+Legend: **Implemented** = usable in this repository; **Implemented (optional)** = available when its external/system component or opt-in setting is enabled; **Delegated** = intentionally supplied by the system/indexer instead of duplicated inside Quickary.
 
 | Area | Status | Quickary implementation |
 |---|---|---|
@@ -35,29 +35,31 @@ Legend: **Implemented** = usable in this repository; **Implemented (optional)** 
 | Filter result counts / multi-filter UI | **Implemented** | Deep Search has live All/Files/Folders/Apps/Favorites/Commands/Web counts and combinable type facets |
 | Sortable file columns | **Implemented** | Deep Search table exposes Name, Path, Type, Size and Modified columns with local sorting |
 | Themes / theme presets | **Implemented** | Follow Windows, Dark and Light modes, applied live from Settings |
-| Graphical settings | **Implemented** | startup, Explorer typing, preview behavior, native preview, close-after-activation, result limits and theme controls |
+| Graphical settings | **Implemented** | startup, Explorer typing, preview behavior, native preview, close-after-activation, result limits, theme and API controls |
 | Start with Windows | **Implemented** | per-user HKCU Run registration; no administrator permission required |
-| Local HTTP search API | **Planned / non-core** | intentionally omitted from the default desktop build to avoid adding a localhost attack surface and idle service |
+| Local HTTP search API | **Implemented (optional)** | disabled by default; binds only to `127.0.0.1`, bearer-token authenticated `/v1/search`, unauthenticated `/health`, GET-only, 200-result cap and bounded queue; see `HTTP_API.md` |
 | Global hotkeys | **Implemented** | double Ctrl + Alt+Space launcher, Ctrl+Alt+Space Deep Search; event driven |
-| Offline-first / no telemetry | **Implemented** | no telemetry; network access only occurs for an explicit web action or user-configured network index |
+| Offline-first / no telemetry | **Implemented** | no telemetry; network access only occurs for an explicit web action, user-configured network index, or the opt-in localhost API |
 
 ## Performance invariants
 
 - No filesystem crawl on the UI thread.
 - No timer-based global polling while idle.
-- Only one Everything query worker runs at a time; rapid keystrokes are coalesced to the newest request.
+- Only one Everything query worker runs per provider and all Everything SDK provider instances share a process-wide query lock.
+- Rapid UI keystrokes are coalesced to the newest request.
 - Launcher keeps a small configurable working result set; Deep Search expands it only on request.
 - Type facets and column sorting operate on the already-returned result model; they do not launch another disk query.
 - Icons and optional Pinyin conversions are cached.
 - Preview is lazy. Image/text/native shell handlers are opened only when the preview pane is visible.
 - Full-text `content:`/`text:` search is explicit and never runs for an ordinary filename query.
 - Network/NAS crawling is not duplicated: Quickary consumes Everything Folder Index instead of maintaining a second background crawler.
+- The HTTP API is disabled by default; while disabled it has no listening socket and does not instantiate its dedicated Everything provider.
 
-## Quickary 1.0 desktop completion scope
+## Quickary 1.1 desktop completion scope
 
-The 1.0 desktop release treats the following as product-complete surfaces: Launcher, Deep Search, sorting/facets, actions, native context menu access, preview, settings/themes, startup behavior, Explorer integration, standard file-dialog navigation, Everything-backed local/network search, commands/web actions, favorites, recommendations and customization JSON.
+The 1.1 desktop release includes Launcher, Deep Search, sorting/facets, actions, native context menu access, preview, settings/themes, startup behavior, Explorer integration, standard file-dialog navigation, Everything-backed local/network search, commands/web actions, favorites, recommendations, customization JSON, advanced content syntax, and a secure opt-in localhost search API.
 
-Future work can still deepen individual integrations (for example third-party proprietary file-dialog adapters or an optional local API) without changing the 1.0 desktop architecture or requiring them to be advertised as completed today.
+Future work can still deepen proprietary third-party file-dialog adapters or add plugin-specific integrations without changing the core architecture.
 
 ## Public reference surface reviewed
 
