@@ -32,9 +32,7 @@ QString kindName(ItemKind kind)
 
 HttpApiServer::HttpApiServer(QObject* parent) : QObject(parent)
 {
-    provider_ = new EverythingProvider(this);
     connect(&server_, &QTcpServer::newConnection, this, &HttpApiServer::acceptConnections);
-    connect(provider_, &EverythingProvider::resultsReady, this, &HttpApiServer::onSearchResults);
 }
 
 HttpApiServer::~HttpApiServer()
@@ -48,6 +46,10 @@ bool HttpApiServer::start(quint16 requestedPort, const QString& token)
     if (token.trimmed().isEmpty()) {
         emit statusChanged(false, QStringLiteral("HTTP API token is empty"));
         return false;
+    }
+    if (!provider_) {
+        provider_ = new EverythingProvider(this);
+        connect(provider_, &EverythingProvider::resultsReady, this, &HttpApiServer::onSearchResults);
     }
     token_ = token.toUtf8();
     if (!server_.listen(QHostAddress::LocalHost, requestedPort)) {
@@ -189,7 +191,7 @@ void HttpApiServer::queueSearch(QTcpSocket* socket, const QString& query, int li
 
 void HttpApiServer::startNextQuery()
 {
-    if (queryInFlight_ || queue_.isEmpty()) return;
+    if (queryInFlight_ || queue_.isEmpty() || !provider_) return;
     active_ = queue_.dequeue();
     if (!active_.socket) {
         active_ = {};
