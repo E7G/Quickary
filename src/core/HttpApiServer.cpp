@@ -8,6 +8,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QTcpSocket>
+#include <QTimer>
 #include <QUrl>
 #include <QUrlQuery>
 #include <limits>
@@ -32,6 +33,7 @@ QString kindName(ItemKind kind)
 
 HttpApiServer::HttpApiServer(QObject* parent) : QObject(parent)
 {
+    server_.setMaxPendingConnections(16);
     connect(&server_, &QTcpServer::newConnection, this, &HttpApiServer::acceptConnections);
 }
 
@@ -51,6 +53,11 @@ bool HttpApiServer::start(quint16 requestedPort, const QString& token)
         provider_ = new EverythingProvider(this);
         connect(provider_, &EverythingProvider::resultsReady, this, &HttpApiServer::onSearchResults);
     }
+    if (!provider_->isAvailable()) {
+        emit statusChanged(false, QStringLiteral("HTTP API requires the Everything SDK and running Everything backend"));
+        return false;
+    }
+
     token_ = token.toUtf8();
     if (!server_.listen(QHostAddress::LocalHost, requestedPort)) {
         emit statusChanged(false, QStringLiteral("HTTP API could not listen on 127.0.0.1:%1: %2")
@@ -88,6 +95,12 @@ void HttpApiServer::acceptConnections()
         socket->setParent(this);
         connect(socket, &QTcpSocket::readyRead, this, [this, socket] { consumeRequest(socket); });
         connect(socket, &QTcpSocket::disconnected, socket, &QObject::deleteLater);
+        QTimer::singleShot(5000, socket, [socket] {
+            if (socket->state() != QAbstractSocket::UnconnectedState
+                && !socket->property("quickaryRequestAccepted").toBool()) {
+                socket->disconnectFromHost();
+            }
+        });
     }
 }
 
@@ -128,15 +141,18 @@ void HttpApiServer::consumeRequest(QTcpSocket* socket)
             {QStringLiteral("service"), QStringLiteral("Quickary")},
             {QStringLiteral("version"), QStringLiteral("1.1.0")},
         };
+        socket->setProperty("quickaryRequestAccepted", true);
         sendJson(socket, 200, "OK", QJsonDocument(health).toJson(QJsonDocument::Compact));
         return;
     }
 
     if (url.path() != QStringLiteral("/v1/search")) {
+        socket->setProperty("quickaryRequestAccepted", true);
         sendError(socket, 404, "Not Found", QStringLiteral("unknown endpoint"));
         return;
     }
     if (!authorized(lines)) {
+        socket->setProperty("quickaryRequestAccepted", true);
         sendError(socket, 401, "Unauthorized", QStringLiteral("missing or invalid API token"));
         return;
     }
@@ -144,6 +160,7 @@ void HttpApiServer::consumeRequest(QTcpSocket* socket)
     const QUrlQuery params(url);
     const QString query = params.queryItemValue(QStringLiteral("q"), QUrl::FullyDecoded).trimmed();
     if (query.isEmpty() || query.size() > 512) {
+        socket->setProperty("quickaryRequestAccepted", true);
         sendError(socket, 400, "Bad Request", QStringLiteral("q must contain 1 to 512 characters"));
         return;
     }
