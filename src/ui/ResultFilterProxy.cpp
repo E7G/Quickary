@@ -15,8 +15,9 @@ ResultFilterProxy::ResultFilterProxy(QObject* parent) : QSortFilterProxyModel(pa
 void ResultFilterProxy::setKindFilters(const QSet<int>& kinds)
 {
     if (kinds_ == kinds) return;
+    beginFilterChange();
     kinds_ = kinds;
-    invalidateFilter();
+    endFilterChange(Direction::Rows);
 }
 
 bool ResultFilterProxy::filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const
