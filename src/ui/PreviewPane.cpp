@@ -1,5 +1,6 @@
 #include "PreviewPane.h"
 
+#include "SearchResultModel.h"
 #include "../core/AppSettings.h"
 #include "../platform/ShellPreviewHost.h"
 
