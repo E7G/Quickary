@@ -5,6 +5,8 @@
 
 #ifdef Q_OS_WIN
 #include <windows.h>
+#include <ole2.h>
+#include <oaidl.h>
 #include <exdisp.h>
 #include <oleauto.h>
 #include <vector>
