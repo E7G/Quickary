@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
 
@@ -17,6 +17,8 @@ jobs:
           cache: true
 
       - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
 
       - name: Configure
         shell: pwsh
@@ -24,7 +26,7 @@ jobs:
 
       - name: Build
         shell: pwsh
-        run: cmake --build build --config Release
+        run: cmake --build build --config Release --verbose
 
       - name: Stage portable artifact
         shell: pwsh
