@@ -12,6 +12,7 @@
 #include <oaidl.h>
 #include <exdisp.h>
 #include <oleauto.h>
+#include <iterator>
 #include <vector>
 #endif
 
@@ -181,6 +182,13 @@ void DialogNavigator::captureForegroundTarget()
 #endif
 }
 
+void DialogNavigator::discardForegroundTarget()
+{
+#ifdef Q_OS_WIN
+    gCapturedForeground = nullptr;
+#endif
+}
+
 QString DialogNavigator::activeExplorerFolder()
 {
 #ifndef Q_OS_WIN
@@ -244,11 +252,9 @@ bool DialogNavigator::jumpActiveFileDialogTo(const QString& folder)
 
     bool handled = false;
     if (isStandardFileDialog(target)) {
-        // Windows Common Item Dialog and legacy standard dialogs remain automatic.
         handled = sendLocationWithKeyboard(target, folder, QStringLiteral("alt-d"));
         if (!handled) handled = setLegacyEdit(target, folder);
     } else if (const DialogAdapter* adapter = matchingAdapter(target)) {
-        // Nonstandard dialogs are touched only after an explicit process/class allowlist match.
         if (adapter->focusMode == QStringLiteral("legacy-edit"))
             handled = setLegacyEdit(target, folder);
         else
