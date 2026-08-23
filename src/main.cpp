@@ -67,8 +67,14 @@ int main(int argc, char** argv)
     QSystemTrayIcon tray(QApplication::style()->standardIcon(QStyle::SP_FileDialogContentsView));
     tray.setToolTip(QStringLiteral("Quickary"));
     QMenu trayMenu;
-    trayMenu.addAction(QStringLiteral("Launcher"), &window, [&window] { window.summon(false); });
-    trayMenu.addAction(QStringLiteral("Deep Search"), &window, [&window] { window.summon(true); });
+    trayMenu.addAction(QStringLiteral("Launcher"), &window, [&window] {
+        DialogNavigator::captureForegroundTarget();
+        window.summon(false);
+    });
+    trayMenu.addAction(QStringLiteral("Deep Search"), &window, [&window] {
+        DialogNavigator::captureForegroundTarget();
+        window.summon(true);
+    });
     trayMenu.addAction(QStringLiteral("Settings…"), &app, showSettings);
     QAction* explorerTyping = trayMenu.addAction(QStringLiteral("Explorer type-to-search"));
     explorerTyping->setCheckable(true);
@@ -117,7 +123,10 @@ int main(int argc, char** argv)
     trayMenu.addAction(QStringLiteral("Quit"), &app, &QCoreApplication::quit);
     tray.setContextMenu(&trayMenu);
     QObject::connect(&tray, &QSystemTrayIcon::activated, &window, [&window](QSystemTrayIcon::ActivationReason reason) {
-        if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick) window.summon(false);
+        if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick) {
+            DialogNavigator::captureForegroundTarget();
+            window.summon(false);
+        }
     });
     tray.show();
 
