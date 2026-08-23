@@ -8,23 +8,66 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: jurplel/install-qt-action@v4
-        with:
-          version: '6.8.3'
-          arch: 'win64_msvc2022_64'
-          cache: true
+      # Qt 6.11 changed the online repository layout. aqtinstall 3.3.0 still
+      # assumes the pre-6.11 layout, so install the official Qt archives
+      # directly until upstream aqtinstall ships support for the new layout.
+      - name: Install Qt 6.11.2
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $qtOut = Join-Path $env:GITHUB_WORKSPACE 'Qt'
+          $pkg = 'https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_6112/qt6_6112_msvc2022_64/qt.qt6.6112.win64_msvc2022_64'
+          $archives = @(
+            '6.11.2-0-202608131017qtbase-Windows-Windows_11_24H2-MSVC2022-Windows-Windows_11_24H2-X86_64.7z',
+            '6.11.2-0-202608131017qttools-Windows-Windows_11_24H2-MSVC2022-Windows-Windows_11_24H2-X86_64.7z',
+            '6.11.2-0-202608131017qtsvg-Windows-Windows_11_24H2-MSVC2022-Windows-Windows_11_24H2-X86_64.7z'
+          )
 
-      - uses: ilammy/msvc-dev-cmd@v1
+          New-Item -ItemType Directory -Force -Path $qtOut | Out-Null
+          foreach ($archive in $archives) {
+            $target = Join-Path $env:RUNNER_TEMP $archive
+            curl.exe -fL --retry 5 --retry-delay 2 "$pkg/$archive" -o $target
+            if ($LASTEXITCODE -ne 0) { throw "Failed to download $archive" }
+            7z x $target "-o$qtOut" -y | Out-Host
+            if ($LASTEXITCODE -ne 0) { throw "Failed to extract $archive" }
+          }
+
+          # Do not assume the archive's internal prefix. Qt 6.11 changed the
+          # repository/package layout, so resolve the root from Qt6Config.cmake.
+          $qtConfig = Get-ChildItem -Path $qtOut -Recurse -File -Filter 'Qt6Config.cmake' |
+            Select-Object -First 1
+          if (-not $qtConfig) {
+            Get-ChildItem -Path $qtOut -Recurse -Depth 4 | Select-Object -ExpandProperty FullName | Out-Host
+            throw 'Qt6Config.cmake was not found after extracting the official Qt archives'
+          }
+
+          $qtRoot = $qtConfig.Directory.Parent.Parent.Parent.FullName
+          $qtBin = Join-Path $qtRoot 'bin'
+          if (-not (Test-Path $qtBin)) { throw "Qt bin directory is missing: $qtBin" }
+
+          @"
+          [Paths]
+          Prefix=..
+          "@ | Set-Content -Encoding ASCII (Join-Path $qtBin 'qt.conf')
+
+          Write-Host "Resolved Qt root: $qtRoot"
+          "QT_ROOT_DIR=$qtRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $qtBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Configure
         shell: pwsh
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQUICKARY_ENABLE_PINYIN=OFF
+        run: >
+          cmake -S . -B build
+          -G "Visual Studio 18 2026"
+          -A x64
+          -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR"
+          -DQUICKARY_ENABLE_PINYIN=OFF
 
       - name: Build
         shell: pwsh
-        run: cmake --build build --config Release
+        run: cmake --build build --config Release --parallel --verbose
 
       - name: Stage portable artifact
         shell: pwsh
