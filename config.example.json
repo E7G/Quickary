@@ -1,0 +1,35 @@
+{
+  "filters": [
+    {
+      "keyword": "code:",
+      "expression": "ext:c;cc;cpp;cxx;h;hh;hpp;hxx;py;js;ts;rs;go;java;kt"
+    }
+  ],
+  "commands": [
+    {
+      "keyword": "code",
+      "title": "Open current folder in VS Code",
+      "description": "Custom command example",
+      "program": "code.cmd",
+      "arguments": ["{current_folder}"],
+      "admin": false
+    }
+  ],
+  "webSearch": [
+    {
+      "keyword": "gh",
+      "name": "GitHub",
+      "url": "https://github.com/search?q={query}",
+      "requiresQuery": true
+    }
+  ],
+  "actions": [
+    {
+      "name": "Open in VS Code",
+      "program": "code.cmd",
+      "arguments": ["{path}"],
+      "extensions": ["*"],
+      "admin": false
+    }
+  ]
+}

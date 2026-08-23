@@ -1,0 +1,45 @@
+name: Windows Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          arch: 'win64_msvc2022_64'
+          cache: true
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure
+        shell: pwsh
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQUICKARY_ENABLE_PINYIN=OFF
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --config Release
+
+      - name: Stage portable artifact
+        shell: pwsh
+        run: |
+          cmake --install build --prefix dist --config Release
+          windeployqt --release --no-translations dist/Quickary.exe
+          Copy-Item README.md,FEATURES.md,DESIGN.md,CUSTOMIZATION.md,config.example.json dist/
+          Copy-Item scripts/build-windows.ps1 dist/
+          @"
+          Quickary requires the standard Everything client (not Everything Lite) and Everything64.dll from the official Everything SDK.
+          Run scripts/build-windows.ps1 locally for automatic SDK download/copy, or download the SDK from https://www.voidtools.com/support/everything/sdk/.
+          "@ | Set-Content -Encoding UTF8 dist/README-RUNTIME.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Quickary-windows-x64
+          path: dist/
+          if-no-files-found: error
