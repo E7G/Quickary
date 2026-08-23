@@ -7,7 +7,9 @@
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QGroupBox>
+#include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QSpinBox>
 #include <QTabWidget>
@@ -19,7 +21,7 @@ SettingsDialog::SettingsDialog(QWidget* parent) : QDialog(parent)
 {
     setWindowTitle(QStringLiteral("Quickary Settings"));
     setModal(false);
-    resize(520, 430);
+    resize(560, 500);
 
     auto* root = new QVBoxLayout(this);
     auto* tabs = new QTabWidget(this);
@@ -74,6 +76,49 @@ SettingsDialog::SettingsDialog(QWidget* parent) : QDialog(parent)
     appearanceLayout->addRow(QStringLiteral("Theme:"), theme_);
     tabs->addTab(appearance, QStringLiteral("Appearance"));
 
+    auto* api = new QWidget(tabs);
+    auto* apiLayout = new QVBoxLayout(api);
+    auto* apiGroup = new QGroupBox(QStringLiteral("Local HTTP Search API"), api);
+    auto* apiForm = new QFormLayout(apiGroup);
+    httpApiEnabled_ = new QCheckBox(QStringLiteral("Enable localhost API"), apiGroup);
+    httpApiPort_ = new QSpinBox(apiGroup);
+    httpApiPort_->setRange(1024, 65535);
+    httpApiPort_->setValue(32142);
+    httpApiToken_ = new QLineEdit(apiGroup);
+    httpApiToken_->setReadOnly(true);
+    httpApiToken_->setClearButtonEnabled(false);
+    regenerateToken_ = new QPushButton(QStringLiteral("Regenerate token"), apiGroup);
+    auto* tokenRow = new QWidget(apiGroup);
+    auto* tokenLayout = new QHBoxLayout(tokenRow);
+    tokenLayout->setContentsMargins(0, 0, 0, 0);
+    tokenLayout->addWidget(httpApiToken_, 1);
+    tokenLayout->addWidget(regenerateToken_);
+    httpApiEndpoint_ = new QLineEdit(apiGroup);
+    httpApiEndpoint_->setReadOnly(true);
+    apiForm->addRow(httpApiEnabled_);
+    apiForm->addRow(QStringLiteral("Port:"), httpApiPort_);
+    apiForm->addRow(QStringLiteral("Bearer token:"), tokenRow);
+    apiForm->addRow(QStringLiteral("Endpoint:"), httpApiEndpoint_);
+    apiLayout->addWidget(apiGroup);
+
+    auto* apiNote = new QLabel(QStringLiteral(
+        "Disabled by default. When enabled, Quickary binds only to 127.0.0.1, accepts GET requests only, requires the token for /v1/search, caps results at 200, and keeps a small request queue. /health is available without authentication."), api);
+    apiNote->setWordWrap(true);
+    apiNote->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    apiLayout->addWidget(apiNote);
+    apiLayout->addStretch(1);
+    tabs->addTab(api, QStringLiteral("API"));
+
+    connect(httpApiPort_, &QSpinBox::valueChanged, this, [this] { refreshApiSummary(); });
+    connect(httpApiEnabled_, &QCheckBox::toggled, this, [this](bool enabled) {
+        httpApiPort_->setEnabled(enabled);
+        httpApiToken_->setEnabled(enabled);
+        regenerateToken_->setEnabled(enabled);
+    });
+    connect(regenerateToken_, &QPushButton::clicked, this, [this] {
+        httpApiToken_->setText(AppSettings::instance().regenerateHttpApiToken());
+    });
+
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel | QDialogButtonBox::Apply, this);
     root->addWidget(buttons);
     connect(buttons, &QDialogButtonBox::accepted, this, [this] { apply(); accept(); });
@@ -95,6 +140,18 @@ void SettingsDialog::load()
     closeAfterActivation_->setChecked(settings.closeAfterActivation());
     launcherLimit_->setValue(settings.launcherResultLimit());
     deepLimit_->setValue(settings.deepSearchResultLimit());
+    httpApiEnabled_->setChecked(settings.httpApiEnabled());
+    httpApiPort_->setValue(settings.httpApiPort());
+    httpApiToken_->setText(settings.httpApiToken());
+    httpApiPort_->setEnabled(httpApiEnabled_->isChecked());
+    httpApiToken_->setEnabled(httpApiEnabled_->isChecked());
+    regenerateToken_->setEnabled(httpApiEnabled_->isChecked());
+    refreshApiSummary();
+}
+
+void SettingsDialog::refreshApiSummary()
+{
+    httpApiEndpoint_->setText(QStringLiteral("http://127.0.0.1:%1/v1/search?q=report&limit=50").arg(httpApiPort_->value()));
 }
 
 void SettingsDialog::apply()
@@ -108,6 +165,8 @@ void SettingsDialog::apply()
     settings.setCloseAfterActivation(closeAfterActivation_->isChecked());
     settings.setLauncherResultLimit(launcherLimit_->value());
     settings.setDeepSearchResultLimit(deepLimit_->value());
+    settings.setHttpApiEnabled(httpApiEnabled_->isChecked());
+    settings.setHttpApiPort(static_cast<quint16>(httpApiPort_->value()));
     settings.sync();
     emit settingsApplied();
 }
