@@ -83,10 +83,10 @@ void AppSettings::setThemeMode(ThemeMode value)
 
 void AppSettings::setLaunchAtStartup(bool value)
 {
-    const bool changed = launchAtStartup() != value;
+    const bool didChange = launchAtStartup() != value;
     settings_.setValue(QLatin1String(kLaunchAtStartup), value);
     updateStartupRegistration();
-    if (changed) emit changed();
+    if (didChange) emit changed();
 }
 
 void AppSettings::setExplorerTypeToSearch(bool value)
