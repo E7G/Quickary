@@ -4,6 +4,8 @@
 
 class QCheckBox;
 class QComboBox;
+class QLineEdit;
+class QPushButton;
 class QSpinBox;
 
 namespace quickary {
@@ -21,6 +23,7 @@ private slots:
 
 private:
     void load();
+    void refreshApiSummary();
 
     QComboBox* theme_{};
     QCheckBox* startup_{};
@@ -30,6 +33,11 @@ private:
     QCheckBox* closeAfterActivation_{};
     QSpinBox* launcherLimit_{};
     QSpinBox* deepLimit_{};
+    QCheckBox* httpApiEnabled_{};
+    QSpinBox* httpApiPort_{};
+    QLineEdit* httpApiToken_{};
+    QLineEdit* httpApiEndpoint_{};
+    QPushButton* regenerateToken_{};
 };
 
 } // namespace quickary
