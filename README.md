@@ -40,9 +40,9 @@ See [`FEATURES.md`](FEATURES.md) for an explicit implemented/partial/planned par
 ## Requirements
 
 - Windows 10/11 x64
-- Qt 6.5+ (6.8+ recommended)
-- CMake 3.24+
-- Visual Studio 2022 / MSVC
+- Qt 6.11.2 recommended (CI uses the official 6.11.2 Windows/MSVC binaries)
+- A current CMake with the `Visual Studio 18 2026` generator for the default build path
+- Visual Studio 2026 / MSVC x64
 - Everything 1.4.1+ running in the background
 - `Everything64.dll` from the official Everything SDK placed beside `Quickary.exe` (for 64-bit builds)
 
@@ -50,18 +50,22 @@ Everything's SDK DLL is an IPC wrapper; the Everything application/service must 
 
 ## Build
 
+Current 2026 toolchain:
+
 ```powershell
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="C:/Qt/6.8.3/msvc2022_64"
-cmake --build build --config Release
+cmake -S . -B build -G "Visual Studio 18 2026" -A x64 -DCMAKE_PREFIX_PATH="C:/Qt/6.11.2/msvc2022_64"
+cmake --build build --config Release --parallel
 ```
 
 For the convenient Windows path, run:
 
 ```powershell
-./scripts/build-windows.ps1 -QtPrefix "C:/Qt/6.8.3/msvc2022_64"
+./scripts/build-windows.ps1 -QtPrefix "C:/Qt/6.11.2/msvc2022_64"
 ```
 
-The script builds, runs `windeployqt`, downloads the **official** Everything SDK, and copies `Everything64.dll` beside the executable. It does not install or modify Everything itself.
+The build script defaults to **Visual Studio 18 2026**, builds Release, runs `windeployqt`, downloads the **official** Everything SDK, and copies `Everything64.dll` beside the executable. Pass `-Generator "Visual Studio 17 2022"` or `-Generator Ninja` only if you intentionally want an older/different local toolchain.
+
+GitHub Actions uses `windows-latest`, which currently resolves to the Windows Server 2025 image with Visual Studio 2026. Qt 6.11 changed the online repository layout while aqtinstall 3.3.0 still assumes the older layout, so CI downloads the official Qt 6.11.2 `qtbase`, `qttools`, and `qtsvg` archives directly instead of downgrading Qt.
 
 For a manual build, copy `Everything64.dll` from the official SDK into the folder containing `Quickary.exe`, then run the standard (non-Lite) Everything client and Quickary.
 
