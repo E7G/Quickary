@@ -31,5 +31,12 @@
       "extensions": ["*"],
       "admin": false
     }
+  ],
+  "dialogAdapters": [
+    {
+      "process": "ExampleApp.exe",
+      "windowClass": "ExampleFileDialogClass",
+      "focus": "ctrl-l"
+    }
   ]
 }
