@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(Quickary VERSION 0.2.0 LANGUAGES CXX)
+project(Quickary VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,6 +19,8 @@ endif()
 qt_add_executable(Quickary
     src/main.cpp
     src/core/SearchTypes.h
+    src/core/AppSettings.h
+    src/core/AppSettings.cpp
     src/core/ConfigStore.h
     src/core/ConfigStore.cpp
     src/core/QueryParser.h
@@ -46,14 +48,20 @@ qt_add_executable(Quickary
     src/platform/HotkeyManager.cpp
     src/platform/ShellActions.h
     src/platform/ShellActions.cpp
+    src/platform/ShellPreviewHost.h
+    src/platform/ShellPreviewHost.cpp
     src/platform/DialogNavigator.h
     src/platform/DialogNavigator.cpp
     src/ui/SearchResultModel.h
     src/ui/SearchResultModel.cpp
+    src/ui/ResultFilterProxy.h
+    src/ui/ResultFilterProxy.cpp
     src/ui/ResultDelegate.h
     src/ui/ResultDelegate.cpp
     src/ui/PreviewPane.h
     src/ui/PreviewPane.cpp
+    src/ui/SettingsDialog.h
+    src/ui/SettingsDialog.cpp
     src/ui/LauncherWindow.h
     src/ui/LauncherWindow.cpp
 )
@@ -88,7 +96,7 @@ endif()
 
 if(WIN32)
     target_compile_definitions(Quickary PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
-    target_link_libraries(Quickary PRIVATE shell32 ole32 oleaut32 user32 advapi32)
+    target_link_libraries(Quickary PRIVATE shell32 shlwapi ole32 oleaut32 user32 advapi32)
 endif()
 
 if(QUICKARY_ENABLE_WARNINGS)
