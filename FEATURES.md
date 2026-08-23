@@ -1,7 +1,6 @@
-# Quickary 1.1 feature matrix
+# Quickary 1.2 feature matrix
 
-This document tracks the **publicly documented Listary-style workflow surface** against Quickary.
-Quickary is an independent implementation: it does not copy Listary code, assets, branding, or proprietary implementation details.
+This document tracks the publicly documented Listary-style workflow surface against Quickary. Quickary is an independent implementation and does not copy Listary code, assets, branding, or proprietary implementation details.
 
 Legend: **Implemented** = usable in this repository; **Implemented (optional)** = available when its external/system component or opt-in setting is enabled; **Delegated** = intentionally supplied by the system/indexer instead of duplicated inside Quickary.
 
@@ -9,57 +8,60 @@ Legend: **Implemented** = usable in this repository; **Implemented (optional)** 
 |---|---|---|
 | Instant file/folder search | **Implemented** | Everything SDK IPC provider; no per-query disk crawl |
 | Mixed app + file launcher | **Implemented** | Start Menu / WindowsApps provider merged with files, folders, favorites, commands and web actions |
-| Launcher / Deep Search split | **Implemented** | compact low-latency Launcher plus full Deep Search table (`F2` / second summon) |
+| Launcher / Deep Search split | **Implemented** | compact low-latency Launcher plus full Deep Search table |
 | Smart ranking / usage learning | **Implemented** | exact/prefix/fuzzy score plus local frequency + recency boost |
 | Fuzzy matching | **Implemented** | substring, acronym and subsequence scoring |
 | Chinese Pinyin / initials | **Implemented (optional)** | cached `cpp-pinyin` scoring when package + dictionary are available |
 | Path narrowing with `\` | **Implemented** | translated into Everything path constraints |
 | File type filters | **Implemented** | built-ins plus custom filter keywords mapped to Everything expressions through JSON |
 | Advanced search syntax | **Implemented** | quoted phrases, exclusions, `ext:`, `size:`, `date:` alias, `dm:/dc:`, `path:`, `parent:`, `regex:` and explicit content search |
-| Full-text content search | **Implemented (optional)** | `text:` aliases to Everything `content:`; `content:` / `regex:content:` pass through explicitly. Requires an Everything version that supports those functions; normal searches never read file contents |
-| Preview | **Implemented** | fast image/text preview first, then installed Windows Shell `IPreviewHandler` for formats such as PDF/Office when a handler is registered |
-| Actions | **Implemented** | open, reveal, copy path, copy, cut, recycle, favorite, custom executable actions, plus the native Windows Shell context menu for a selected item |
-| Multi-select batch actions | **Implemented** | Deep Search row multi-selection; open/copy/cut/copy-path/recycle operate in batches |
+| Full-text content search | **Implemented (optional)** | `text:` aliases to Everything `content:`; normal searches never read file contents |
+| Preview | **Implemented** | fast image/text preview first, then installed Windows Shell `IPreviewHandler` when registered |
+| Actions | **Implemented** | open, reveal, copy path, copy, cut, recycle, favorite, custom actions and native Windows context menu |
+| Multi-select batch actions | **Implemented** | Deep Search row multi-selection with batch open/copy/cut/copy-path/recycle |
 | Commands | **Implemented** | cmd/cmda, psh/psha, mkdir, touch, shutdown, reboot, uninstall, connections, hosts |
-| Custom commands | **Implemented** | local JSON definitions support executable, argument templates and optional UAC elevation; hot reload from tray |
-| Web search | **Implemented** | Google, Wikipedia, Stack Overflow, Bing, Baidu, YouTube, Maps, Amazon, IMDb, Gmail |
-| Custom web engines | **Implemented** | local JSON keyword/name/URL templates with encoded `{query}`; hot reload from tray |
+| Custom commands | **Implemented** | JSON executable/argument templates with optional UAC elevation |
+| Web search | **Implemented** | built-in engines plus explicit web commands |
+| Custom web engines | **Implemented** | local JSON keyword/name/URL templates |
 | Menus / Favorites | **Implemented** | pin/unpin paths and merge favorites into ranking |
-| Quick Save & Open / Quick Switch | **Implemented core** | standard Windows file dialogs use address-bar navigation with a legacy `#32770` fallback |
-| Explorer type-to-search | **Implemented** | event-driven printable typing detection while Explorer is foreground; toggleable from Settings/tray |
-| Current Explorer-folder awareness | **Implemented** | Shell COM (`IShellWindows`) resolves the foreground Explorer location without polling |
-| Cloud / NAS / network search | **Implemented integration** | network shares and NAS folders added to Everything Folder Index are searchable through the same IPC path; Quickary deliberately does not run a second competing crawler |
-| External storage | **Implemented integration** | searchable when the location is indexed by Everything |
-| Live index updates | **Delegated** | Everything owns NTFS/folder-index updates and Quickary consumes the live index through IPC |
-| Empty-query recommendations | **Implemented** | bounded local activation history is shown without an all-database query |
-| Filter result counts / multi-filter UI | **Implemented** | Deep Search has live All/Files/Folders/Apps/Favorites/Commands/Web counts and combinable type facets |
-| Sortable file columns | **Implemented** | Deep Search table exposes Name, Path, Type, Size and Modified columns with local sorting |
-| Themes / theme presets | **Implemented** | Follow Windows, Dark and Light modes, applied live from Settings |
-| Graphical settings | **Implemented** | startup, Explorer typing, preview behavior, native preview, close-after-activation, result limits, theme and API controls |
-| Start with Windows | **Implemented** | per-user HKCU Run registration; no administrator permission required |
-| Local HTTP search API | **Implemented (optional)** | disabled by default; binds only to `127.0.0.1`, bearer-token authenticated `/v1/search`, unauthenticated `/health`, GET-only, 200-result cap and bounded queue; see `HTTP_API.md` |
-| Global hotkeys | **Implemented** | double Ctrl + Alt+Space launcher, Ctrl+Alt+Space Deep Search; event driven |
-| Offline-first / no telemetry | **Implemented** | no telemetry; network access only occurs for an explicit web action, user-configured network index, or the opt-in localhost API |
+| Standard Quick Save/Open | **Implemented** | foreground dialog is captured before Quickary takes focus; standard `#32770` dialogs use address navigation with legacy Edit fallback |
+| Third-party file-dialog adapters | **Implemented (optional)** | explicit process + Win32 class allowlist in JSON; only `alt-d`, `ctrl-l`, or `legacy-edit` modes are accepted; no arbitrary macro strings or target-process injection |
+| Explorer type-to-search | **Implemented** | event-driven printable typing detection while Explorer is foreground |
+| Current Explorer-folder awareness | **Implemented** | Shell COM resolves foreground Explorer location without polling |
+| Cloud / NAS / network search | **Implemented integration** | locations indexed by Everything Folder Index are searched through the same IPC path |
+| External storage | **Implemented integration** | searchable when indexed by Everything |
+| Live index updates | **Delegated** | Everything owns NTFS/folder-index updates |
+| Empty-query recommendations | **Implemented** | bounded local activation history without an all-database query |
+| Filter result counts / multi-filter UI | **Implemented** | live type counts and combinable facets |
+| Sortable file columns | **Implemented** | Name, Path, Type, Size and Modified local sorting |
+| Themes / theme presets | **Implemented** | Follow Windows, Dark and Light |
+| Graphical settings | **Implemented** | startup, Explorer typing, preview behavior, result limits, theme and API controls |
+| Transactional settings | **Implemented** | reopening reloads saved values; Cancel discards unsaved UI state; generated API tokens persist only on Apply/OK |
+| Start with Windows | **Implemented** | per-user HKCU Run registration |
+| Local HTTP search API | **Implemented (optional)** | localhost-only, token-authenticated search API with bounded requests/results; see `HTTP_API.md` |
+| Global hotkeys | **Implemented** | double Ctrl / Alt+Space Launcher and Ctrl+Alt+Space Deep Search |
+| Offline-first / no telemetry | **Implemented** | no telemetry; no resident remote service |
 
 ## Performance invariants
 
 - No filesystem crawl on the UI thread.
 - No timer-based global polling while idle.
-- Only one Everything query worker runs per provider and all Everything SDK provider instances share a process-wide query lock.
+- Everything SDK queries are serialized process-wide so UI and optional API search cannot corrupt shared DLL query state.
 - Rapid UI keystrokes are coalesced to the newest request.
-- Launcher keeps a small configurable working result set; Deep Search expands it only on request.
-- Type facets and column sorting operate on the already-returned result model; they do not launch another disk query.
+- Launcher keeps a small configurable working result set; Deep Search expands only on request.
+- Facets and column sorting operate on already-returned results.
 - Icons and optional Pinyin conversions are cached.
-- Preview is lazy. Image/text/native shell handlers are opened only when the preview pane is visible.
-- Full-text `content:`/`text:` search is explicit and never runs for an ordinary filename query.
-- Network/NAS crawling is not duplicated: Quickary consumes Everything Folder Index instead of maintaining a second background crawler.
-- The HTTP API is disabled by default; while disabled it has no listening socket and does not instantiate its dedicated Everything provider.
+- Preview is lazy.
+- Full-text content search is explicit.
+- Network/NAS crawling is not duplicated.
+- HTTP API is absent while disabled.
+- File-dialog adapter logic runs only when the user activates a folder result; it installs no global hook and starts no worker.
 
-## Quickary 1.1 desktop completion scope
+## Quickary 1.2 desktop completion scope
 
-The 1.1 desktop release includes Launcher, Deep Search, sorting/facets, actions, native context menu access, preview, settings/themes, startup behavior, Explorer integration, standard file-dialog navigation, Everything-backed local/network search, commands/web actions, favorites, recommendations, customization JSON, advanced content syntax, and a secure opt-in localhost search API.
+Quickary 1.2 includes Launcher, Deep Search, ranking, filtering, sorting, previews, Windows context actions, standard Save/Open navigation, explicit third-party dialog adapters, Explorer integration, settings/themes, startup, Everything-backed local/network search, commands/web actions, favorites, recommendations, customization JSON, content syntax and the optional authenticated localhost API.
 
-Future work can still deepen proprietary third-party file-dialog adapters or add plugin-specific integrations without changing the core architecture.
+Third-party dialog support is intentionally allowlist-driven because proprietary applications can implement arbitrary UI structures. Adding a new adapter requires identifying its executable and Win32 top-level class instead of guessing against every foreground window.
 
 ## Public reference surface reviewed
 
