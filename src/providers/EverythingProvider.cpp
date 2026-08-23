@@ -3,6 +3,7 @@
 #include "../core/QueryParser.h"
 #include <QCoreApplication>
 #include <QFileInfo>
+#include <QMutex>
 #include <QTimeZone>
 #include <QtConcurrent>
 #include <string>
@@ -39,8 +40,6 @@ EverythingProvider::EverythingProvider(QObject* parent) : ISearchProvider(parent
 
 EverythingProvider::~EverythingProvider()
 {
-    // QtConcurrent::run is not cancellable here; wait during orderly application shutdown
-    // so the worker cannot observe a destroyed provider or unloaded Everything DLL.
     if (watcher_.isRunning()) watcher_.waitForFinished();
 }
 
@@ -88,7 +87,6 @@ bool EverythingProvider::loadSdk()
 
 void EverythingProvider::search(const SearchRequest& request)
 {
-    // Empty input is recommendation mode. Avoid an all-database IPC query entirely.
     if (request.rawQuery.trimmed().isEmpty()) {
         emit resultsReady(SearchBatch{id(), request.serial, {}});
         return;
@@ -98,7 +96,7 @@ void EverythingProvider::search(const SearchRequest& request)
         return;
     }
     if (busy_) {
-        pending_ = request; // Coalesce keystrokes: only the newest query matters.
+        pending_ = request;
         return;
     }
     start(request);
@@ -116,8 +114,6 @@ SearchBatch EverythingProvider::runQuery(const SearchRequest& request)
 #ifndef Q_OS_WIN
     return batch;
 #else
-    // The Everything SDK DLL keeps query state inside the process. Serialize all provider
-    // instances (UI + optional HTTP API) so Reset/SetSearch/Query cannot interleave.
     QMutexLocker lock(&globalEverythingSdkMutex());
     reset_();
 

@@ -20,6 +20,13 @@ QStringList stringList(const QJsonValue& value)
     return out;
 }
 
+bool validDialogFocusMode(const QString& mode)
+{
+    return mode == QStringLiteral("alt-d")
+        || mode == QStringLiteral("ctrl-l")
+        || mode == QStringLiteral("legacy-edit");
+}
+
 } // namespace
 
 ConfigStore& ConfigStore::instance()
@@ -51,6 +58,7 @@ bool ConfigStore::ensureFile()
         {QStringLiteral("commands"), QJsonArray{}},
         {QStringLiteral("webSearch"), QJsonArray{}},
         {QStringLiteral("actions"), QJsonArray{}},
+        {QStringLiteral("dialogAdapters"), QJsonArray{}},
     };
     file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
     return true;
@@ -74,6 +82,7 @@ bool ConfigStore::reload(QString* error)
     QVector<CustomCommand> commands;
     QVector<CustomWebEngine> web;
     QVector<CustomAction> actions;
+    QVector<DialogAdapter> dialogAdapters;
     const QJsonObject root = document.object();
 
     for (const auto& value : root.value(QStringLiteral("filters")).toArray()) {
@@ -111,11 +120,21 @@ bool ConfigStore::reload(QString* error)
         a.admin = o.value(QStringLiteral("admin")).toBool(false);
         if (!a.name.isEmpty() && !a.program.isEmpty()) actions.push_back(std::move(a));
     }
+    for (const auto& value : root.value(QStringLiteral("dialogAdapters")).toArray()) {
+        const QJsonObject o = value.toObject();
+        DialogAdapter adapter;
+        adapter.process = o.value(QStringLiteral("process")).toString().trimmed();
+        adapter.windowClass = o.value(QStringLiteral("windowClass")).toString().trimmed();
+        adapter.focusMode = o.value(QStringLiteral("focus")).toString().trimmed().toCaseFolded();
+        if (!adapter.process.isEmpty() && !adapter.windowClass.isEmpty() && validDialogFocusMode(adapter.focusMode))
+            dialogAdapters.push_back(std::move(adapter));
+    }
 
     filters_ = std::move(filters);
     commands_ = std::move(commands);
     webEngines_ = std::move(web);
     actions_ = std::move(actions);
+    dialogAdapters_ = std::move(dialogAdapters);
     if (error) error->clear();
     return true;
 }

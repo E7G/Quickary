@@ -2,6 +2,7 @@
 
 #include "../providers/EverythingProvider.h"
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QHostAddress>
 #include <QJsonArray>
@@ -139,7 +140,7 @@ void HttpApiServer::consumeRequest(QTcpSocket* socket)
         const QJsonObject health{
             {QStringLiteral("ok"), true},
             {QStringLiteral("service"), QStringLiteral("Quickary")},
-            {QStringLiteral("version"), QStringLiteral("1.1.0")},
+            {QStringLiteral("version"), QCoreApplication::applicationVersion()},
         };
         socket->setProperty("quickaryRequestAccepted", true);
         sendJson(socket, 200, "OK", QJsonDocument(health).toJson(QJsonDocument::Compact));

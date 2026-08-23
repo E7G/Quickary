@@ -20,13 +20,6 @@ constexpr auto kHttpApiEnabled = "api/enabled";
 constexpr auto kHttpApiPort = "api/port";
 constexpr auto kHttpApiToken = "api/token";
 
-QString createApiToken()
-{
-    QString token = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    token.remove(QLatin1Char('-'));
-    return token;
-}
-
 } // namespace
 
 AppSettings& AppSettings::instance()
@@ -35,10 +28,17 @@ AppSettings& AppSettings::instance()
     return value;
 }
 
+QString AppSettings::generateHttpApiToken()
+{
+    QString token = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    token.remove(QLatin1Char('-'));
+    return token;
+}
+
 AppSettings::AppSettings()
 {
     if (settings_.value(QLatin1String(kHttpApiToken)).toString().trimmed().isEmpty())
-        settings_.setValue(QLatin1String(kHttpApiToken), createApiToken());
+        settings_.setValue(QLatin1String(kHttpApiToken), generateHttpApiToken());
 }
 
 ThemeMode AppSettings::themeMode() const
@@ -159,11 +159,10 @@ void AppSettings::setHttpApiPort(quint16 value)
     setValue(QLatin1String(kHttpApiPort), qBound(1024, static_cast<int>(value), 65535));
 }
 
-QString AppSettings::regenerateHttpApiToken()
+void AppSettings::setHttpApiToken(const QString& value)
 {
-    const QString token = createApiToken();
-    setValue(QLatin1String(kHttpApiToken), token);
-    return token;
+    const QString token = value.trimmed();
+    if (!token.isEmpty()) setValue(QLatin1String(kHttpApiToken), token);
 }
 
 void AppSettings::sync()

@@ -15,6 +15,7 @@ class AppSettings final : public QObject {
     Q_OBJECT
 public:
     static AppSettings& instance();
+    static QString generateHttpApiToken();
 
     ThemeMode themeMode() const;
     bool launchAtStartup() const;
@@ -38,7 +39,7 @@ public:
     void setDeepSearchResultLimit(int value);
     void setHttpApiEnabled(bool value);
     void setHttpApiPort(quint16 value);
-    QString regenerateHttpApiToken();
+    void setHttpApiToken(const QString& value);
 
     void sync();
 

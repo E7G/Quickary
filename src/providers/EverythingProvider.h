@@ -3,7 +3,6 @@
 #include "ISearchProvider.h"
 #include <QFutureWatcher>
 #include <QLibrary>
-#include <QMutex>
 #include <optional>
 
 #ifdef Q_OS_WIN
@@ -57,7 +56,6 @@ private:
 #endif
 
     QLibrary sdk_;
-    QMutex sdkMutex_;
     QFutureWatcher<SearchBatch> watcher_;
     std::optional<SearchRequest> pending_;
     bool busy_{false};

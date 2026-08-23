@@ -11,6 +11,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QShowEvent>
 #include <QSpinBox>
 #include <QTabWidget>
 #include <QVBoxLayout>
@@ -116,7 +117,7 @@ SettingsDialog::SettingsDialog(QWidget* parent) : QDialog(parent)
         regenerateToken_->setEnabled(enabled);
     });
     connect(regenerateToken_, &QPushButton::clicked, this, [this] {
-        httpApiToken_->setText(AppSettings::instance().regenerateHttpApiToken());
+        httpApiToken_->setText(AppSettings::generateHttpApiToken());
     });
 
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel | QDialogButtonBox::Apply, this);
@@ -126,6 +127,12 @@ SettingsDialog::SettingsDialog(QWidget* parent) : QDialog(parent)
     connect(buttons->button(QDialogButtonBox::Apply), &QPushButton::clicked, this, &SettingsDialog::apply);
 
     load();
+}
+
+void SettingsDialog::showEvent(QShowEvent* event)
+{
+    load();
+    QDialog::showEvent(event);
 }
 
 void SettingsDialog::load()
@@ -167,6 +174,7 @@ void SettingsDialog::apply()
     settings.setDeepSearchResultLimit(deepLimit_->value());
     settings.setHttpApiEnabled(httpApiEnabled_->isChecked());
     settings.setHttpApiPort(static_cast<quint16>(httpApiPort_->value()));
+    settings.setHttpApiToken(httpApiToken_->text());
     settings.sync();
     emit settingsApplied();
 }

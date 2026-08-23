@@ -1,27 +1,26 @@
-# Quickary 1.1
+# Quickary 1.2
 
 Quickary is an independent Windows-first launcher and file-search application built with Qt 6 and C++20. It focuses on fast keyboard workflows, low idle resource use, and native Windows integration.
 
-See [`FEATURES.md`](FEATURES.md) for the detailed implementation matrix, [`CUSTOMIZATION.md`](CUSTOMIZATION.md) for custom filters/commands/actions/web engines, and [`HTTP_API.md`](HTTP_API.md) for the optional localhost API.
+See [`FEATURES.md`](FEATURES.md) for the implementation matrix, [`CUSTOMIZATION.md`](CUSTOMIZATION.md) for custom filters/commands/actions/web engines/file-dialog adapters, and [`HTTP_API.md`](HTTP_API.md) for the optional localhost API.
 
-## Included in 1.1
+## Included in 1.2
 
 - Instant file/folder search through Everything SDK IPC.
-- Compact Launcher and a full Deep Search workspace.
-- Deep Search columns: Name, Path, Type, Size and Modified.
+- Compact Launcher and full Deep Search workspace with sortable Name/Path/Type/Size/Modified columns.
 - Live type counts and combinable Files/Folders/Apps/Favorites/Commands/Web facets.
-- Smart ranking plus local frequency/recency learning.
-- Optional cached Chinese Pinyin/initials matching.
-- Filters including `folder:`, `file:`, `doc:`, `pic:`, `video:`, `audio:`, `ext:`, `size:`, `date:`, `dm:` and `dc:`.
-- Explicit advanced syntax for `path:`, `parent:`, `regex:`, `content:` and `regex:content:`. `text:` is a Quickary alias for `content:`.
+- Smart ranking, local frequency/recency learning, fuzzy matching and optional cached Chinese Pinyin/initials matching.
+- Advanced Everything-oriented syntax including explicit `content:`/`text:` full-text search.
 - Built-in image/text preview plus installed Windows Shell preview handlers when available.
-- Open, reveal, copy path, copy, cut, recycle, favorites, custom actions and access to the Windows context menu.
-- Multi-select batch actions in Deep Search.
-- Standard Windows file-dialog navigation and Explorer folder awareness/type-to-search.
+- Windows context menu access, batch actions, favorites, custom actions, commands and web engines.
+- Explorer folder awareness/type-to-search and global keyboard activation.
+- **Reliable Quick Save/Open context capture:** Quickary records the foreground window before taking focus, then validates and restores that target when a folder result is activated.
+- Standard Windows Save/Open dialog navigation automatically.
+- **Explicit third-party file-dialog adapters** configured by exact executable + Win32 window class, with only three allowlisted navigation modes: `alt-d`, `ctrl-l`, `legacy-edit`.
 - Network/NAS locations through Everything Folder Index without a second resident crawler.
-- Graphical Settings for startup, Explorer typing, preview behavior, native preview, result limits, close behavior and System/Dark/Light themes.
-- Per-user Start with Windows support without administrator rights.
-- **Optional localhost HTTP search API**: disabled by default, `127.0.0.1` only, bearer-token authentication, bounded queue, 200-result cap and no command/action execution surface.
+- Graphical Settings for startup, Explorer typing, preview behavior, result limits, themes and the local API.
+- Settings are transactional: Cancel discards unsaved UI changes, and API token rotation is persisted only by Apply/OK.
+- Optional localhost HTTP search API: disabled by default, `127.0.0.1` only, bearer-token authentication, bounded queue and no command/action execution surface.
 - Tray operation, no telemetry and no timer-based global polling while idle.
 
 ## Requirements
@@ -30,7 +29,7 @@ See [`FEATURES.md`](FEATURES.md) for the detailed implementation matrix, [`CUSTO
 - Qt 6.11.x (CI uses 6.11.2)
 - Current CMake with the `Visual Studio 18 2026` generator
 - Visual Studio 2026 / MSVC x64
-- Everything 1.4.1+ for normal indexed filename/path search
+- Everything 1.4.1+ for indexed filename/path search
 - An Everything version supporting `content:` if you want explicit full-text searches
 - `Everything64.dll` from the official Everything SDK beside `Quickary.exe`
 
@@ -47,7 +46,7 @@ Or use:
 ./scripts/build-windows.ps1 -QtPrefix "C:/Qt/6.11.2/msvc2022_64"
 ```
 
-The Windows build script builds Release, runs `windeployqt`, downloads the official Everything SDK and places the runtime DLL beside Quickary. GitHub Actions uses `windows-latest` with the current VS2026 image and installs the official Qt 6.11.2 Windows archives directly.
+The Windows build script builds Release, runs `windeployqt`, downloads the official Everything SDK and places its runtime DLL beside Quickary. GitHub Actions uses the current Windows/VS2026 image and official Qt 6.11.2 Windows archives.
 
 ## Keyboard workflow
 
@@ -56,7 +55,7 @@ The Windows build script builds Release, runs `windeployqt`, downloads the offic
 | Double `Ctrl` / `Alt+Space` | Launcher |
 | `Ctrl+Alt+Space` | Deep Search |
 | `F2` | Toggle Launcher / Deep Search |
-| `Enter` | Open / execute |
+| `Enter` | Open / execute / navigate an active file dialog when a folder is selected |
 | `Ctrl+Enter` | Reveal in Explorer |
 | `Ctrl+N` / `Ctrl+P` | Move selection |
 | `Alt+P` | Toggle preview |
@@ -64,19 +63,23 @@ The Windows build script builds Release, runs `windeployqt`, downloads the offic
 | `Ctrl+,` | Settings |
 | `Esc` | Hide |
 
-## Search examples
+## Third-party file dialogs
 
-```text
-report pdf
-folder: project
-file: ext:pdf size:>10mb report
-pic: date:week
--project temp
-text:"invoice total" ext:pdf
-regex:^IMG_\d{4}\.jpg$
+Standard Windows dialogs require no configuration. Proprietary dialogs can be allowlisted in `quickary.json`:
+
+```json
+{
+  "dialogAdapters": [
+    {
+      "process": "ExampleApp.exe",
+      "windowClass": "ExampleFileDialogClass",
+      "focus": "ctrl-l"
+    }
+  ]
+}
 ```
 
-Content search is explicit by design. Ordinary Launcher input remains on the fast indexed filename/path route and does not read file contents.
+Quickary does not accept arbitrary macro strings here. `focus` must be exactly `alt-d`, `ctrl-l`, or `legacy-edit`. Use the exact Win32 class whenever possible; `"*"` is supported only as an explicit opt-in for all top-level windows of the named process. See [`CUSTOMIZATION.md`](CUSTOMIZATION.md).
 
 ## Local HTTP API
 
@@ -89,8 +92,8 @@ Invoke-RestMethod `
   -Headers @{ Authorization = "Bearer $token" }
 ```
 
-`GET /health` is unauthenticated. `GET /v1/search` requires the token. The API exposes only the Everything-backed file/folder search path; it cannot execute Quickary commands, custom actions, shell commands, or web actions. See [`HTTP_API.md`](HTTP_API.md).
+`GET /health` is unauthenticated. `GET /v1/search` requires the token and exposes only Everything-backed file/folder search. See [`HTTP_API.md`](HTTP_API.md).
 
 ## Performance model
 
-Everything queries run on background workers, UI keystrokes are coalesced, and all Everything provider instances share a process-wide SDK lock so the optional API cannot corrupt UI query state. UI input uses a short debounce, icons/Pinyin are cached, facets and sorting operate locally on returned results, preview is lazy, and Quickary does not run a competing network or filesystem crawler. The HTTP listener and its dedicated provider are not created while the API is disabled.
+Everything queries run on background workers and all Everything provider instances share a process-wide SDK lock. UI input is debounced/coalesced, icons and optional Pinyin are cached, facets/sorting operate locally, preview is lazy, network indexing is delegated to Everything, and the HTTP listener/provider are absent while disabled. File-dialog adapters are purely activation-time integrations: they add no polling, hooks or background workers.
