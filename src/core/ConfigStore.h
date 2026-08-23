@@ -35,6 +35,12 @@ struct CustomAction {
     bool admin{false};
 };
 
+struct DialogAdapter {
+    QString process;
+    QString windowClass;
+    QString focusMode;
+};
+
 class ConfigStore final {
 public:
     static ConfigStore& instance();
@@ -47,6 +53,7 @@ public:
     const QVector<CustomCommand>& commands() const { return commands_; }
     const QVector<CustomWebEngine>& webEngines() const { return webEngines_; }
     const QVector<CustomAction>& actions() const { return actions_; }
+    const QVector<DialogAdapter>& dialogAdapters() const { return dialogAdapters_; }
 
     QString filterExpression(const QString& keyword) const;
 
@@ -57,6 +64,7 @@ private:
     QVector<CustomCommand> commands_;
     QVector<CustomWebEngine> webEngines_;
     QVector<CustomAction> actions_;
+    QVector<DialogAdapter> dialogAdapters_;
 };
 
 } // namespace quickary
