@@ -2,6 +2,7 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QUuid>
 #include <QtGlobal>
 
 namespace quickary {
@@ -15,6 +16,16 @@ constexpr auto kNativePreview = "general/nativePreview";
 constexpr auto kCloseAfterActivation = "general/closeAfterActivation";
 constexpr auto kLauncherLimit = "search/launcherLimit";
 constexpr auto kDeepLimit = "search/deepLimit";
+constexpr auto kHttpApiEnabled = "api/enabled";
+constexpr auto kHttpApiPort = "api/port";
+constexpr auto kHttpApiToken = "api/token";
+
+QString createApiToken()
+{
+    QString token = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    token.remove(QLatin1Char('-'));
+    return token;
+}
 
 } // namespace
 
@@ -24,7 +35,11 @@ AppSettings& AppSettings::instance()
     return value;
 }
 
-AppSettings::AppSettings() = default;
+AppSettings::AppSettings()
+{
+    if (settings_.value(QLatin1String(kHttpApiToken)).toString().trimmed().isEmpty())
+        settings_.setValue(QLatin1String(kHttpApiToken), createApiToken());
+}
 
 ThemeMode AppSettings::themeMode() const
 {
@@ -67,6 +82,21 @@ int AppSettings::launcherResultLimit() const
 int AppSettings::deepSearchResultLimit() const
 {
     return qBound(100, settings_.value(QLatin1String(kDeepLimit), 500).toInt(), 2000);
+}
+
+bool AppSettings::httpApiEnabled() const
+{
+    return settings_.value(QLatin1String(kHttpApiEnabled), false).toBool();
+}
+
+quint16 AppSettings::httpApiPort() const
+{
+    return static_cast<quint16>(qBound(1024, settings_.value(QLatin1String(kHttpApiPort), 32142).toInt(), 65535));
+}
+
+QString AppSettings::httpApiToken() const
+{
+    return settings_.value(QLatin1String(kHttpApiToken)).toString();
 }
 
 void AppSettings::setValue(const QString& key, const QVariant& value)
@@ -117,6 +147,23 @@ void AppSettings::setLauncherResultLimit(int value)
 void AppSettings::setDeepSearchResultLimit(int value)
 {
     setValue(QLatin1String(kDeepLimit), qBound(100, value, 2000));
+}
+
+void AppSettings::setHttpApiEnabled(bool value)
+{
+    setValue(QLatin1String(kHttpApiEnabled), value);
+}
+
+void AppSettings::setHttpApiPort(quint16 value)
+{
+    setValue(QLatin1String(kHttpApiPort), qBound(1024, static_cast<int>(value), 65535));
+}
+
+QString AppSettings::regenerateHttpApiToken()
+{
+    const QString token = createApiToken();
+    setValue(QLatin1String(kHttpApiToken), token);
+    return token;
 }
 
 void AppSettings::sync()
