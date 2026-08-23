@@ -14,6 +14,11 @@ namespace {
 constexpr DWORD EVERYTHING_REQUEST_FULL_PATH_AND_FILE_NAME = 0x00000004;
 constexpr DWORD EVERYTHING_REQUEST_SIZE = 0x00000010;
 constexpr DWORD EVERYTHING_REQUEST_DATE_MODIFIED = 0x00000040;
+QMutex& globalEverythingSdkMutex()
+{
+    static QMutex mutex;
+    return mutex;
+}
 }
 #endif
 
@@ -111,7 +116,9 @@ SearchBatch EverythingProvider::runQuery(const SearchRequest& request)
 #ifndef Q_OS_WIN
     return batch;
 #else
-    QMutexLocker lock(&sdkMutex_);
+    // The Everything SDK DLL keeps query state inside the process. Serialize all provider
+    // instances (UI + optional HTTP API) so Reset/SetSearch/Query cannot interleave.
+    QMutexLocker lock(&globalEverythingSdkMutex());
     reset_();
 
     const ParsedQuery parsed = QueryParser::parse(request.rawQuery);
