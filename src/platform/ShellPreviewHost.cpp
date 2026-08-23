@@ -3,6 +3,8 @@
 #include <QFileInfo>
 #include <QResizeEvent>
 
+#include <iterator>
+
 #ifdef Q_OS_WIN
 #include <windows.h>
 #include <objbase.h>
@@ -28,7 +30,7 @@ bool previewHandlerClsid(const QString& path, CLSID* clsid)
 {
     const QString suffix = QFileInfo(path).suffix();
     if (suffix.isEmpty()) return false;
-    const std::wstring association = (QLatin1Char('.') + suffix).toStdWString();
+    const std::wstring association = (QStringLiteral(".") + suffix).toStdWString();
 
     wchar_t clsidText[64]{};
     DWORD length = static_cast<DWORD>(std::size(clsidText));
