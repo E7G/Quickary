@@ -24,6 +24,9 @@ public:
     bool closeAfterActivation() const;
     int launcherResultLimit() const;
     int deepSearchResultLimit() const;
+    bool httpApiEnabled() const;
+    quint16 httpApiPort() const;
+    QString httpApiToken() const;
 
     void setThemeMode(ThemeMode value);
     void setLaunchAtStartup(bool value);
@@ -33,6 +36,9 @@ public:
     void setCloseAfterActivation(bool value);
     void setLauncherResultLimit(int value);
     void setDeepSearchResultLimit(int value);
+    void setHttpApiEnabled(bool value);
+    void setHttpApiPort(quint16 value);
+    QString regenerateHttpApiToken();
 
     void sync();
 
