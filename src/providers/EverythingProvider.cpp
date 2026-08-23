@@ -3,6 +3,7 @@
 #include "../core/QueryParser.h"
 #include <QCoreApplication>
 #include <QFileInfo>
+#include <QTimeZone>
 #include <QtConcurrent>
 #include <string>
 
@@ -120,8 +121,7 @@ SearchBatch EverythingProvider::runQuery(const SearchRequest& request)
     setMax_(static_cast<DWORD>(request.deepSearch ? qMax(request.limit, 256) : request.limit));
     setRequestFlags_(EVERYTHING_REQUEST_FULL_PATH_AND_FILE_NAME | EVERYTHING_REQUEST_SIZE | EVERYTHING_REQUEST_DATE_MODIFIED);
 
-    if (!queryW_(TRUE))
-        return batch;
+    if (!queryW_(TRUE)) return batch;
 
     const DWORD count = getNumResults_();
     batch.items.reserve(static_cast<int>(count));
@@ -149,7 +149,7 @@ SearchBatch EverythingProvider::runQuery(const SearchRequest& request)
             value.HighPart = ft.dwHighDateTime;
             if (value.QuadPart > 116444736000000000ULL) {
                 const qint64 ms = static_cast<qint64>((value.QuadPart - 116444736000000000ULL) / 10000ULL);
-                item.modified = QDateTime::fromMSecsSinceEpoch(ms, Qt::UTC).toLocalTime();
+                item.modified = QDateTime::fromMSecsSinceEpoch(ms, QTimeZone(QTimeZone::UTC)).toLocalTime();
             }
         }
         batch.items.push_back(std::move(item));
